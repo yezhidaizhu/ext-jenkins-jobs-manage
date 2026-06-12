@@ -36,7 +36,7 @@ async function request(settings: JenkinsSettings, path: string, init: RequestIni
   });
 
   if (!res.ok) {
-    throw new Error(`${path} 请求失败: ${res.status} ${res.statusText}`);
+    throw new Error(`${path} request failed: ${res.status} ${res.statusText}`);
   }
 
   return res;
@@ -46,7 +46,7 @@ async function requireSettings() {
   const settings = await getJenkinsSettings();
 
   if (!isJenkinsSettingsReady(settings)) {
-    throw new Error('Jenkins 配置信息不完整');
+    throw new Error('Jenkins settings are incomplete');
   }
 
   return settings;

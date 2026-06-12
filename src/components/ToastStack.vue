@@ -20,7 +20,7 @@ const { toasts, dismissToast } = useToasts();
         <Info v-else :size="14" :stroke-width="2.8" />
       </span>
       <p class="toast-message">{{ toast.message }}</p>
-      <button class="toast-close" title="关闭" type="button" @click="dismissToast(toast.id)">
+      <button class="toast-close" title="Close" type="button" @click="dismissToast(toast.id)">
         <X :size="14" :stroke-width="2.4" />
       </button>
     </div>

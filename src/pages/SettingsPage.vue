@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { ArrowLeft, Info, Monitor, Moon, Sun } from '@lucide/vue';
-import { onMounted, reactive, ref, watch } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import {
   applyThemeMode,
   getJenkinsSettings,
   isJenkinsSettingsReady,
+  saveJobFilters,
   saveJenkinsSettings,
   saveThemeMode,
 } from '@/src/composables/useJenkinsSettings';
@@ -24,18 +25,20 @@ const isSaving = ref(false);
 const canReturn = ref(false);
 let isSettingsLoaded = false;
 
+const isConnectionReady = computed(() => Boolean(form.host && form.user && form.token));
+
 async function saveSettings() {
   isSaving.value = true;
 
   try {
     await saveJenkinsSettings(form);
     applyThemeMode(form.theme);
-    showToast({ type: 'success', message: 'Jenkins 配置已保存' });
+    showToast({ type: 'success', message: 'Jenkins settings saved' });
     await router.replace('/');
   } catch (error) {
     showToast({
       type: 'error',
-      message: error instanceof Error ? error.message : '保存失败',
+      message: error instanceof Error ? error.message : 'Save failed',
     });
   } finally {
     isSaving.value = false;
@@ -44,7 +47,7 @@ async function saveSettings() {
 
 function goBack() {
   if (!canReturn.value) {
-    showToast({ type: 'info', message: '请先保存 Jenkins 配置' });
+    showToast({ type: 'info', message: 'Save Jenkins settings first' });
     return;
   }
 
@@ -73,6 +76,15 @@ watch(
     }
   },
 );
+
+watch(
+  () => form.jobFilters,
+  async (jobFilters) => {
+    if (isSettingsLoaded) {
+      await saveJobFilters(jobFilters);
+    }
+  },
+);
 </script>
 
 <template>
@@ -86,7 +98,7 @@ watch(
       <button
         class="icon-button"
         :class="{ disabled: !canReturn }"
-        :title="canReturn ? '返回列表' : '请先保存 Jenkins 配置'"
+        :title="canReturn ? 'Back to jobs' : 'Save Jenkins settings first'"
         type="button"
         @click="goBack"
       >
@@ -95,19 +107,24 @@ watch(
     </header>
 
     <form class="settings-form" @submit.prevent="saveSettings">
-      <section class="settings-section" aria-label="Jenkins 连接设置">
+      <section class="settings-section" aria-label="Jenkins connection settings">
         <div class="section-title">
           <h2>Jenkins Connection</h2>
           <p>Required for Jenkins API requests</p>
+        </div>
+
+        <div v-if="!isConnectionReady" class="setup-alert">
+          <Info :size="16" :stroke-width="2.5" />
+          <span>Enter Jenkins Host, User Name, and API Token first.</span>
         </div>
 
         <div class="section-fields">
           <label class="field">
             <span class="field-label">
               <span>Jenkins Host <span class="required-mark">*</span></span>
-              <span class="field-info" tabindex="0" aria-label="Jenkins 服务地址，用于读取任务列表、队列和触发构建。">
+              <span class="field-info" tabindex="0" aria-label="Jenkins server URL for loading jobs, checking the queue, and triggering builds.">
                 <Info :size="14" :stroke-width="2.4" />
-                <span class="field-tooltip" role="tooltip">Jenkins 服务地址，用于读取任务列表、队列和触发构建。</span>
+                <span class="field-tooltip" role="tooltip">Jenkins server URL for loading jobs, checking the queue, and triggering builds.</span>
               </span>
             </span>
             <input v-model="form.host" placeholder="https://jenkins.example.com" type="url" />
@@ -116,9 +133,9 @@ watch(
           <label class="field">
             <span class="field-label">
               <span>User Name <span class="required-mark">*</span></span>
-              <span class="field-info" tabindex="0" aria-label="Jenkins 用户名，用于 Basic Auth 请求 Jenkins API。">
+              <span class="field-info" tabindex="0" aria-label="Jenkins username for Basic Auth requests to the Jenkins API.">
                 <Info :size="14" :stroke-width="2.4" />
-                <span class="field-tooltip" role="tooltip">Jenkins 用户名，用于 Basic Auth 请求 Jenkins API。</span>
+                <span class="field-tooltip" role="tooltip">Jenkins username for Basic Auth requests to the Jenkins API.</span>
               </span>
             </span>
             <input v-model="form.user" autocomplete="username" placeholder="user name" />
@@ -127,39 +144,45 @@ watch(
           <label class="field">
             <span class="field-label">
               <span>API Token <span class="required-mark">*</span></span>
-              <span class="field-info" tabindex="0" aria-label="Jenkins API Token，用于刷新任务、构建和停止任务。">
+              <span class="field-info" tabindex="0" aria-label="Jenkins API Token for refreshing jobs, triggering builds, and stopping builds.">
                 <Info :size="14" :stroke-width="2.4" />
-                <span class="field-tooltip" role="tooltip">Jenkins API Token，用于刷新任务、构建和停止任务。</span>
+                <span class="field-tooltip" role="tooltip">Jenkins API Token for refreshing jobs, triggering builds, and stopping builds.</span>
               </span>
             </span>
             <input v-model="form.token" autocomplete="current-password" placeholder="api token" type="password" />
           </label>
         </div>
+
+        <div class="form-actions">
+          <button class="button save-button" :disabled="isSaving" type="submit">
+            {{ isSaving ? 'Saving...' : 'Save Connection' }}
+          </button>
+        </div>
       </section>
 
-      <section class="settings-section" aria-label="外观设置">
+      <section class="settings-section display-section" aria-label="Display settings">
         <div class="section-title">
-          <h2>Display</h2>
-          <p>Theme applies immediately</p>
+          <h2>Theme</h2>
+          <p>Applies immediately</p>
         </div>
 
-        <div class="segmented-control" role="radiogroup" aria-label="主题">
+        <div class="segmented-control" role="radiogroup" aria-label="Theme">
           <label>
             <input v-model="form.theme" type="radio" value="auto" />
-            <span><Monitor :size="14" :stroke-width="2.4" />Auto</span>
+            <span title="Auto"><Monitor :size="14" :stroke-width="2.4" /></span>
           </label>
           <label>
             <input v-model="form.theme" type="radio" value="light" />
-            <span><Sun :size="14" :stroke-width="2.4" />Light</span>
+            <span title="Light"><Sun :size="14" :stroke-width="2.4" /></span>
           </label>
           <label>
             <input v-model="form.theme" type="radio" value="dark" />
-            <span><Moon :size="14" :stroke-width="2.4" />Dark</span>
+            <span title="Dark"><Moon :size="14" :stroke-width="2.4" /></span>
           </label>
         </div>
       </section>
 
-      <section class="settings-section" aria-label="Job 过滤设置">
+      <section class="settings-section" aria-label="Job filter settings">
         <div class="section-title">
           <h2>Job Filter</h2>
           <p>Only show jobs matching these keywords</p>
@@ -168,20 +191,15 @@ watch(
         <label class="field">
           <span class="field-label">
             <span>Keywords</span>
-            <span class="field-info" tabindex="0" aria-label="一行一个关键词，或用逗号分隔。留空展示全部 Job。">
+            <span class="field-info" tabindex="0" aria-label="One keyword per line, or separate keywords with commas. Leave empty to show all jobs.">
               <Info :size="14" :stroke-width="2.4" />
-              <span class="field-tooltip" role="tooltip">一行一个关键词，或用逗号分隔。留空展示全部 Job。</span>
+              <span class="field-tooltip" role="tooltip">One keyword per line, or separate keywords with commas. Leave empty to show all jobs.</span>
             </span>
           </span>
           <textarea v-model="form.jobFilters" placeholder="frontend&#10;deploy, production" rows="4" />
         </label>
       </section>
 
-      <div class="form-actions">
-        <button class="button save-button" :disabled="isSaving" type="submit">
-          {{ isSaving ? '保存中...' : '保存' }}
-        </button>
-      </div>
     </form>
   </main>
 </template>

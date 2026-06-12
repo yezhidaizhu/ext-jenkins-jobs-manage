@@ -9,7 +9,7 @@ export default defineConfig({
   }),
   manifest: {
     name: 'Jenkins Jobs Manage',
-    description: 'Manage Jenkins jobs from the browser side panel.',
+    description: 'View, search, and trigger Jenkins jobs.',
     permissions: ['storage'],
     host_permissions: ['<all_urls>'],
     action: {},

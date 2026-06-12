@@ -24,19 +24,19 @@ export function validateJenkinsSettings(settings: JenkinsSettings) {
   };
 
   if (!normalizedSettings.host) {
-    throw new Error('请填写 Jenkins Host');
+    throw new Error('Enter Jenkins Host');
   }
 
   if (!/^https?:\/\//.test(normalizedSettings.host)) {
-    throw new Error('Jenkins Host 需要以 http:// 或 https:// 开头');
+    throw new Error('Jenkins Host must start with http:// or https://');
   }
 
   if (!normalizedSettings.user) {
-    throw new Error('请填写 User Name');
+    throw new Error('Enter User Name');
   }
 
   if (!normalizedSettings.token) {
-    throw new Error('请填写 API Token');
+    throw new Error('Enter API Token');
   }
 
   return normalizedSettings;
@@ -60,6 +60,12 @@ export function applyThemeMode(theme: ThemeMode) {
 export async function saveThemeMode(theme: ThemeMode) {
   await browser.storage.local.set({
     [STORAGE_KEYS.theme]: normalizeThemeMode(theme),
+  });
+}
+
+export async function saveJobFilters(jobFilters: string) {
+  await browser.storage.local.set({
+    [STORAGE_KEYS.jobFilters]: jobFilters.trim(),
   });
 }
 
