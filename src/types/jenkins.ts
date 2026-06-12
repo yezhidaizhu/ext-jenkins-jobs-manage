@@ -1,7 +1,11 @@
+export type ThemeMode = 'auto' | 'light' | 'dark';
+
 export type JenkinsSettings = {
   host: string;
   user: string;
   token: string;
+  theme: ThemeMode;
+  jobFilters: string;
 };
 
 export type JobItem = {

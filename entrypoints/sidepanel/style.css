@@ -1,13 +1,14 @@
 @import "tailwindcss";
 
 :root {
+  color-scheme: light;
   --color-bg: #f6f8fb;
   --color-surface: #ffffff;
   --color-surface-muted: #eef2f7;
   --color-border: #d7dee8;
   --color-text: #17202a;
   --color-text-muted: #687386;
-  --color-primary: #2563eb;
+  --color-primary: #ff6a00;
   --color-danger: #dc2626;
   --color-success: #16a34a;
   --color-warning: #ca8a04;
@@ -26,6 +27,38 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-bg: #181a1f;
+  --color-surface: #202329;
+  --color-surface-muted: #292d34;
+  --color-border: #3a4049;
+  --color-text: #f1f3f5;
+  --color-text-muted: #aeb6c1;
+  --color-primary: #ff6a00;
+  --color-danger: #f87171;
+  --color-success: #4ade80;
+  --color-warning: #facc15;
+  --shadow-panel: 0 1px 2px rgba(0, 0, 0, 0.28);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="auto"] {
+    color-scheme: dark;
+    --color-bg: #181a1f;
+    --color-surface: #202329;
+    --color-surface-muted: #292d34;
+    --color-border: #3a4049;
+    --color-text: #f1f3f5;
+    --color-text-muted: #aeb6c1;
+    --color-primary: #ff6a00;
+    --color-danger: #f87171;
+    --color-success: #4ade80;
+    --color-warning: #facc15;
+    --shadow-panel: 0 1px 2px rgba(0, 0, 0, 0.28);
+  }
+}
+
 * {
   box-sizing: border-box;
 }
@@ -36,6 +69,7 @@ body,
   min-width: 320px;
   min-height: 100vh;
   margin: 0;
+  overflow-x: hidden;
 }
 
 * {
@@ -62,7 +96,8 @@ body,
 }
 
 button,
-input {
+input,
+textarea {
   font: inherit;
 }
 
@@ -213,11 +248,9 @@ a[aria-disabled="true"] {
   min-width: 88px;
   border-color: color-mix(in srgb, var(--color-primary) 70%, var(--color-border));
   border-radius: var(--radius-md);
-  background:
-    linear-gradient(180deg, color-mix(in srgb, #ffffff 16%, transparent), transparent),
-    var(--color-primary);
+  background: var(--color-primary);
   box-shadow:
-    0 8px 18px rgba(37, 99, 235, 0.22),
+    0 8px 18px color-mix(in srgb, var(--color-primary) 28%, transparent),
     0 0 0 3px color-mix(in srgb, var(--color-primary) 12%, transparent);
   font-weight: 700;
 }
@@ -350,7 +383,7 @@ a[aria-disabled="true"] {
 .jobs-row {
   position: relative;
   display: grid;
-  grid-template-columns: 92px minmax(0, 1fr) 82px;
+  grid-template-columns: 78px minmax(0, 1fr) 82px;
   align-items: center;
   min-height: 42px;
   padding: 0;
@@ -499,8 +532,39 @@ a[aria-disabled="true"] {
 
 .settings-form {
   display: grid;
-  gap: 14px;
-  padding: 14px 12px;
+  gap: 18px;
+  padding: 14px 12px 18px;
+}
+
+.settings-section {
+  display: grid;
+  gap: 12px;
+  padding-top: 4px;
+}
+
+.settings-section + .settings-section {
+  padding-top: 16px;
+  border-top: 1px solid color-mix(in srgb, var(--color-border) 72%, transparent);
+}
+
+.section-fields {
+  display: grid;
+  gap: 12px;
+}
+
+.section-title h2 {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.section-title p {
+  margin: 2px 0 0;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  line-height: 1.35;
 }
 
 .field {
@@ -543,10 +607,9 @@ a[aria-disabled="true"] {
 .field-tooltip {
   position: absolute;
   bottom: calc(100% + 8px);
-  left: 0;
+  right: 0;
   z-index: 12;
-  width: max-content;
-  max-width: min(260px, calc(100vw - 24px));
+  width: min(260px, calc(100vw - 32px));
   padding: 8px 10px;
   border: 1px solid color-mix(in srgb, var(--color-border) 78%, transparent);
   border-radius: var(--radius-sm);
@@ -570,10 +633,9 @@ a[aria-disabled="true"] {
   transform: translateY(0);
 }
 
-.field input {
+.field input,
+.field textarea {
   width: 100%;
-  height: 36px;
-  padding: 0 10px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   color: var(--color-text);
@@ -581,9 +643,67 @@ a[aria-disabled="true"] {
   outline: none;
 }
 
-.field input:focus {
+.field input {
+  height: 36px;
+  padding: 0 10px;
+}
+
+.field textarea {
+  min-height: 92px;
+  padding: 9px 10px;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.field input:focus,
+.field textarea:focus {
   border-color: var(--color-primary);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 18%, transparent);
+}
+
+.field input::placeholder,
+.field textarea::placeholder {
+  color: color-mix(in srgb, var(--color-text-muted) 62%, transparent);
+}
+
+.segmented-control {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-muted);
+}
+
+.segmented-control label {
+  min-width: 0;
+}
+
+.segmented-control input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.segmented-control span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 30px;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.segmented-control input:checked + span {
+  color: var(--color-text);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-panel);
+  font-weight: 700;
 }
 
 .form-actions {

@@ -13,7 +13,12 @@ import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { RouterLink, useRouter } from 'vue-router';
 import JenkinsStatusBadge from '@/src/components/JenkinsStatusBadge.vue';
 import { getJobs, stopBuild, triggerBuild } from '@/src/composables/useJenkins';
-import { getJenkinsSettings, isJenkinsSettingsReady } from '@/src/composables/useJenkinsSettings';
+import {
+  applyThemeMode,
+  getJenkinsSettings,
+  isJenkinsSettingsReady,
+  parseJobFilters,
+} from '@/src/composables/useJenkinsSettings';
 import { showToast } from '@/src/composables/useToast';
 import type { JobItem } from '@/src/types/jenkins';
 
@@ -23,17 +28,24 @@ const isLoading = ref(false);
 const errorMessage = ref('');
 const pendingAction = ref('');
 const searchQuery = ref('');
+const jobFilters = ref<string[]>([]);
 const confirmJob = ref<JobItem | null>(null);
 const confirmType = ref<'build' | 'stop' | null>(null);
 const host = ref('');
 let pollTimer: number | undefined;
 
 const filteredJobs = computed(() => {
+  const filterJobs = jobFilters.value.length
+    ? jobs.value.filter((job) => {
+        const jobName = job.name.toLowerCase();
+        return jobFilters.value.some((filter) => jobName.includes(filter));
+      })
+    : jobs.value;
   const keyword = searchQuery.value.trim().toLowerCase();
 
-  if (!keyword) return jobs.value;
+  if (!keyword) return filterJobs;
 
-  return jobs.value.filter((job) => job.name.toLowerCase().includes(keyword));
+  return filterJobs.filter((job) => job.name.toLowerCase().includes(keyword));
 });
 
 async function refreshJobs() {
@@ -99,6 +111,8 @@ function openJenkins() {
 onMounted(async () => {
   const settings = await getJenkinsSettings();
   host.value = settings.host;
+  jobFilters.value = parseJobFilters(settings.jobFilters);
+  applyThemeMode(settings.theme);
 
   if (!isJenkinsSettingsReady(settings)) {
     showToast({ type: 'info', message: '请先配置 Jenkins' });
@@ -122,7 +136,7 @@ onUnmounted(() => {
     <header class="app-header">
       <div>
         <h1>Jenkins Jobs</h1>
-        <p>{{ jobs.length }} jobs</p>
+        <p>{{ filteredJobs.length }} / {{ jobs.length }} jobs</p>
       </div>
 
       <nav class="toolbar" aria-label="工具栏">
