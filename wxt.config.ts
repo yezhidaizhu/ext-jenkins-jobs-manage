@@ -9,9 +9,24 @@ export default defineConfig({
   }),
   manifest: {
     name: 'Jenkins Jobs Manage',
-    description: 'View, search, and trigger Jenkins jobs.',
+    description: 'Jenkins jobs manager for viewing, searching, triggering, stopping, and monitoring builds.',
     permissions: ['storage'],
     host_permissions: ['<all_urls>'],
-    action: {},
+    icons: {
+      16: '/icon/16.png',
+      32: '/icon/32.png',
+      48: '/icon/48.png',
+      96: '/icon/96.png',
+      128: '/icon/128.png',
+    },
+    action: {
+      default_icon: {
+        16: '/icon/16.png',
+        32: '/icon/32.png',
+        48: '/icon/48.png',
+        96: '/icon/96.png',
+        128: '/icon/128.png',
+      },
+    },
   },
 });
