@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
   CircleStop,
   ExternalLink,
   PlayCircle,
@@ -19,8 +22,11 @@ import {
   isJenkinsSettingsReady,
   parseJobFilters,
 } from '@/src/composables/useJenkinsSettings';
+import { getJenkinsStatus } from '@/src/composables/useJenkinsStatus';
 import { showToast } from '@/src/composables/useToast';
 import type { JobItem } from '@/src/types/jenkins';
+
+type SortDirection = 'none' | 'asc' | 'desc';
 
 const router = useRouter();
 const jobs = ref<JobItem[]>([]);
@@ -28,10 +34,12 @@ const isLoading = ref(false);
 const errorMessage = ref('');
 const pendingAction = ref('');
 const searchQuery = ref('');
+const statusSortDirection = ref<SortDirection>('none');
 const jobFilters = ref<string[]>([]);
 const confirmJob = ref<JobItem | null>(null);
 const confirmType = ref<'build' | 'stop' | null>(null);
 const host = ref('');
+const skeletonRows = Array.from({ length: 8 }, (_, index) => index);
 let pollTimer: number | undefined;
 
 const filteredJobs = computed(() => {
@@ -43,10 +51,51 @@ const filteredJobs = computed(() => {
     : jobs.value;
   const keyword = searchQuery.value.trim().toLowerCase();
 
-  if (!keyword) return filterJobs;
+  const searchedJobs = keyword
+    ? filterJobs.filter((job) => job.name.toLowerCase().includes(keyword))
+    : filterJobs;
 
-  return filterJobs.filter((job) => job.name.toLowerCase().includes(keyword));
+  if (statusSortDirection.value === 'none') return searchedJobs;
+
+  const direction = statusSortDirection.value === 'asc' ? 1 : -1;
+  return [...searchedJobs].sort((a, b) => {
+    const rankDiff = getStatusRank(a.color) - getStatusRank(b.color);
+    if (rankDiff) return rankDiff * direction;
+    return a.name.localeCompare(b.name) * direction;
+  });
 });
+
+function getStatusRank(color = '') {
+  const normalizedColor = color.toLowerCase();
+
+  if (getJenkinsStatus(normalizedColor).spinning) return 0;
+
+  const order: Record<string, number> = {
+    red: 1,
+    yellow: 2,
+    aborted: 3,
+    grey: 4,
+    notbuilt: 4,
+    disabled: 5,
+    blue: 7,
+  };
+
+  return order[normalizedColor] ?? 6;
+}
+
+function toggleStatusSort() {
+  if (statusSortDirection.value === 'none') {
+    statusSortDirection.value = 'asc';
+    return;
+  }
+
+  if (statusSortDirection.value === 'asc') {
+    statusSortDirection.value = 'desc';
+    return;
+  }
+
+  statusSortDirection.value = 'none';
+}
 
 async function refreshJobs() {
   isLoading.value = true;
@@ -108,8 +157,42 @@ function openJenkins() {
   window.open(host.value, '_blank');
 }
 
-function openJob(job: JobItem) {
-  window.open(job.url, '_blank');
+function isJenkinsTabUrl(tabUrl: string | undefined) {
+  if (!tabUrl || !host.value) return false;
+
+  try {
+    const parsedTabUrl = new URL(tabUrl);
+    const parsedHost = new URL(host.value);
+    const hostPath = parsedHost.pathname.replace(/\/$/, '');
+
+    return (
+      parsedTabUrl.origin === parsedHost.origin &&
+      (!hostPath || parsedTabUrl.pathname === hostPath || parsedTabUrl.pathname.startsWith(`${hostPath}/`))
+    );
+  } catch {
+    return false;
+  }
+}
+
+async function openJob(job: JobItem, event?: MouseEvent | KeyboardEvent) {
+  if (event?.ctrlKey || event?.metaKey) {
+    await browser.tabs.create({ url: job.url });
+    return;
+  }
+
+  const jenkinsTabs = await browser.tabs.query({});
+  const existingTab = jenkinsTabs.find((tab) => isJenkinsTabUrl(tab.url));
+
+  if (existingTab?.id) {
+    await browser.tabs.update(existingTab.id, { active: true, url: job.url });
+
+    if (existingTab.windowId) {
+      await browser.windows.update(existingTab.windowId, { focused: true });
+    }
+    return;
+  }
+
+  await browser.tabs.create({ url: job.url });
 }
 
 onMounted(async () => {
@@ -195,7 +278,20 @@ onUnmounted(() => {
 
     <section class="jobs-table" aria-label="Jenkins jobs">
       <div class="jobs-row jobs-head">
-        <div>Status</div>
+        <div>
+          <button
+            class="status-sort-button"
+            type="button"
+            :aria-sort="statusSortDirection === 'none' ? 'none' : statusSortDirection === 'asc' ? 'ascending' : 'descending'"
+            title="Sort by status"
+            @click="toggleStatusSort"
+          >
+            <span>Status</span>
+            <ArrowUp v-if="statusSortDirection === 'asc'" :size="13" :stroke-width="2.4" />
+            <ArrowDown v-else-if="statusSortDirection === 'desc'" :size="13" :stroke-width="2.4" />
+            <ArrowUpDown v-else :size="13" :stroke-width="2.4" />
+          </button>
+        </div>
         <div class="jobs-head-search">
           <Search class="jobs-head-search-icon" :size="14" :stroke-width="2.4" />
           <input v-model="searchQuery" aria-label="Search Jenkins jobs" placeholder="Search jobs" type="search" />
@@ -203,7 +299,13 @@ onUnmounted(() => {
         <div>Actions</div>
       </div>
 
-      <div v-if="isLoading && !jobs.length" class="empty-state">Loading...</div>
+      <div v-if="isLoading && !jobs.length" class="jobs-skeleton" aria-label="Loading jobs">
+        <div v-for="row in skeletonRows" :key="row" class="jobs-row skeleton-row">
+          <div><span class="skeleton-pill"></span></div>
+          <span><span class="skeleton-line" :style="{ width: `${72 - (row % 4) * 8}%` }"></span></span>
+          <div><span class="skeleton-action"></span></div>
+        </div>
+      </div>
 
       <div v-else-if="errorMessage && !jobs.length" class="empty-state danger">Request failed</div>
 
@@ -217,9 +319,9 @@ onUnmounted(() => {
         class="jobs-row jobs-row-link"
         role="link"
         tabindex="0"
-        @click="openJob(job)"
-        @keydown.enter.prevent="openJob(job)"
-        @keydown.space.prevent="openJob(job)"
+        @click="openJob(job, $event)"
+        @keydown.enter.prevent="openJob(job, $event)"
+        @keydown.space.prevent="openJob(job, $event)"
       >
         <div>
           <JenkinsStatusBadge :color="job.color" />

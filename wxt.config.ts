@@ -10,7 +10,7 @@ export default defineConfig({
   manifest: {
     name: 'Jenkins Jobs Manage',
     description: 'Jenkins jobs manager for viewing, searching, triggering, stopping, and monitoring builds.',
-    permissions: ['storage'],
+    permissions: ['storage', 'tabs'],
     host_permissions: ['<all_urls>'],
     icons: {
       16: '/icon/16.png',

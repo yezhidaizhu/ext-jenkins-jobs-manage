@@ -2,7 +2,7 @@
   "name": "wxt-vue-starter",
   "description": "Jenkins jobs manager for viewing, searching, triggering, stopping, and monitoring builds.",
   "private": true,
-  "version": "0.0.1",
+  "version": "0.0.2",
   "type": "module",
   "scripts": {
     "dev": "wxt",

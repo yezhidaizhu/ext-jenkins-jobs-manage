@@ -1,7 +1,7 @@
 import type { JenkinsStatus } from '@/src/types/jenkins';
 
 const statusMap: Record<string, Omit<JenkinsStatus, 'spinning'>> = {
-  blue: { label: 'Success', tone: 'success' },
+  blue: { label: 'OK', tone: 'success' },
   red: { label: 'Failed', tone: 'danger' },
   yellow: { label: 'Unstable', tone: 'warning' },
   grey: { label: 'Not Built', tone: 'muted' },
